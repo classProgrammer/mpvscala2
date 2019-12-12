@@ -2,11 +2,10 @@ package mpv.basics.actors.advanced
 
 import akka.actor.{Actor, Props, Terminated}
 
-
 class MainActor extends Actor {
-  import PrimeCalculator.{Find, Found}
+  import PrimeCalculator.{Find, Found, Failed}
 
-  context.actorOf(Props(classOf[PrimeCalculator], 1, 100))
+  //context.actorOf(Props(classOf[PrimeCalculator], 1, 100))
   context.actorOf(Props(classOf[PrimeCalculator], 1000, 1200))
 
   context.children.foreach(context.watch(_))
@@ -19,6 +18,9 @@ class MainActor extends Actor {
       if (context.children.size == 0) {
         context.system.terminate()
       }
+    case Failed(l, u) => {
+      println(s"   === FAILED MainActor: computation of primes from $l to $u failed")
+    }
   }
 
   override def unhandled(message: Any): Unit = {

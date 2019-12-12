@@ -1,10 +1,13 @@
 package mpv.basics.actors.advanced
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.SupervisorStrategy.Restart
+import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated}
+import mpv.basics.actors.advanced.PrimeCalculator.Failed
 
 object PrimeCalculator {
   case class Find(lower: Int, upper: Int)
   case class Found(lower: Int, upper: Int, primes: Seq[Int])
+  case class Failed(lower: Int, upper: Int)
 
   def isPrime(number: Int): Boolean = {
     (2 to math.sqrt(number).toInt) forall(n => number % n != 0)
@@ -21,6 +24,11 @@ class PrimeCalculator(lower: Int, upper: Int) extends Actor {
   var nWorkers = 0
 
   createChildren()
+  registerDeathwatch()
+
+  private def registerDeathwatch() = {
+    context.children foreach context.watch
+  }
 
   private def createChildren(): Unit = {
     for ((l, u) <- splitIntoIntervals(lower, upper, MAX_WORKERS)) {
@@ -30,6 +38,11 @@ class PrimeCalculator(lower: Int, upper: Int) extends Actor {
     nWorkers = context.children.size
   }
 
+  override val supervisorStrategy = OneForOneStrategy(2) {
+    case _: ArithmeticException => Restart
+    case ex => SupervisorStrategy.defaultStrategy.decider(ex)
+  }
+
   override def receive: Receive = {
     case Found(l, u, p) =>
       primes ++= p
@@ -37,6 +50,11 @@ class PrimeCalculator(lower: Int, upper: Int) extends Actor {
 
       if (completedWorkers.size >= nWorkers) {
         context.parent ! Found(lower, upper, primes.toSeq)
+        context.stop(self)
+      }
+    case Terminated(actor) =>
+      if (! completedWorkers.contains(actor)) {
+        context.parent ! Failed(lower, upper)
         context.stop(self)
       }
   }
