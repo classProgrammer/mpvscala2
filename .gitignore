@@ -2,6 +2,6 @@
 *.log
 # FOLDER
 .idea/
+target/
 null/
 project/
-target/
