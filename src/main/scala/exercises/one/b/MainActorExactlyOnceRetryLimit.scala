@@ -7,7 +7,7 @@ import exercises.one.b.AtLeastOnceProducer._
 
 class MainActorExactlyOnceRetryLimit extends Actor {
   val producer: ActorRef = context.actorOf(Props(new AtLeastOnceProducerRetryLimit(500, 2)), "MessageProducer")
-  val consumer: ActorRef = context.actorOf(Props(new UnreliableConsumerProcessOnce(0.4f)), "MessageConsumer")
+  val consumer: ActorRef = context.actorOf(Props(new UnreliableConsumerProcessOnce(0.05f)), "MessageConsumer")
 
   producer ! Produce("h1", consumer)
   producer ! Produce("h0w w45 y0ur d4y", consumer)
@@ -21,7 +21,7 @@ class MainActorExactlyOnceRetryLimit extends Actor {
 
   override def receive: Receive = {
     case AllMessagesConfirmed() =>
-        println("TERMINATING: All messages confirmed")
+        println("TERMINATING: All messages processed or discarded")
         context.system.terminate()
   }
 }

@@ -60,7 +60,7 @@ class AtLeastOnceProducerRetryLimit(interval: Long, retries: Int) extends Actor 
         context.parent ! AllMessagesConfirmed()
       }
     case RetryLimitReached(id, text) =>
-      println(s"   --- RETRY LIMIT REACHED: '${text}' : STOP")
+      println(s"   --- RETRY LIMIT REACHED: '${text}' : DISCARDED")
       messages.get(id).foreach(c => {
         c.cancel()
       })
