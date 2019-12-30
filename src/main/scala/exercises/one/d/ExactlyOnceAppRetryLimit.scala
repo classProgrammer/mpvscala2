@@ -1,4 +1,4 @@
-package exercises.one.b
+package exercises.one.d
 
 import akka.actor.{ActorSystem, Props}
 

@@ -1,10 +1,11 @@
-package exercises.one.b
+package exercises.one.d
 
 import java.time.Duration
 import java.util.UUID
 import java.util.UUID.randomUUID
 
 import akka.actor.{Actor, ActorRef, Cancellable}
+import exercises.one.b.AtLeastOnceProducer
 
 import scala.collection.mutable.Map
 
@@ -13,8 +14,8 @@ object AtLeastOnceProducerRetryLimit {
 }
 
 class AtLeastOnceProducerRetryLimit(interval: Long, retries: Int) extends Actor {
-  import AtLeastOnceProducerRetryLimit._
   import AtLeastOnceProducer._
+  import AtLeastOnceProducerRetryLimit._
   import exercises.one.a.MessageProducer._
 
   var messages = Map.empty[UUID, Cancellable]

@@ -1,4 +1,4 @@
-package exercises.one.b
+package exercises.one.c
 
 import java.util.UUID
 
@@ -7,8 +7,8 @@ import exercises.one.util.PCUtil
 
 
 class UnreliableConsumerProcessOnce(successProbability: Float) extends Actor {
-  import exercises.one.b.AtLeastOnceProducer._
   import exercises.one.a.MessageProducer._
+  import exercises.one.b.AtLeastOnceProducer._
 
   val rand = scala.util.Random
   var processed = Map.empty[UUID, UUID]

@@ -1,8 +1,9 @@
-package exercises.one.b
+package exercises.one.c
 
 import akka.actor.{Actor, ActorRef, Props}
-import exercises.one.b.AtLeastOnceProducer.{AllMessagesConfirmed}
 import exercises.one.a.MessageProducer._
+import exercises.one.b.AtLeastOnceProducer.AllMessagesConfirmed
+import exercises.one.b.AtLeastOnceProducer
 
 class MainActorExactlyOnce extends Actor {
   val producer: ActorRef = context.actorOf(Props(new AtLeastOnceProducer(500)), "MessageProducer")

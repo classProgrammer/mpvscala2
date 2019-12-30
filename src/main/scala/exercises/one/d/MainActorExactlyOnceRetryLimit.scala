@@ -1,8 +1,9 @@
-package exercises.one.b
+package exercises.one.d
 
 import akka.actor.{Actor, ActorRef, Props}
 import exercises.one.a.MessageProducer._
 import exercises.one.b.AtLeastOnceProducer._
+import exercises.one.c.UnreliableConsumerProcessOnce
 
 
 class MainActorExactlyOnceRetryLimit extends Actor {
