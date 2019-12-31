@@ -1,6 +1,141 @@
 # mpvscala2
 
+## Exercise 2.1 a)
+```text
+=========== SimpleMessageExchange App ===========
+   === MessageConsumer.received message: hi at 04:01:45
+   === MessageConsumer.received message: sup at 04:01:45
+   === MessageConsumer.received message: bye at 04:01:45
+   === MessageConsumer.received message: hi delayed at 04:01:46
+   === MessageConsumer.received message: sup delayed at 04:01:47
+   === MessageConsumer.received message: bye delayed at 04:01:48
+
+Process finished with exit code 0
+```
+
+## Exercise 2.1 b)
+```text
+=========== AtLeastOnceApp ===========
+   +++ send message: 'h1'
+   +++ send message: 'h0w w45 y0ur d4y'
+   +++ send message: 'm1n3 w45 0k'
+   +++ send message: 'n1c3 2 h34r'
+   +++ send message: 'by3'
+   === UnreliableConsumer PROCESSED: 'h1' @ 04:01:21
+   === UnreliableConsumer PROCESSED: 'h0w w45 y0ur d4y' @ 04:01:21
+   === UnreliableConsumer PROCESSED: 'm1n3 w45 0k' @ 04:01:21
+   === UnreliableConsumer PROCESSED: 'n1c3 2 h34r' @ 04:01:21
+   === UnreliableConsumer PROCESSED: 'by3' @ 04:01:21
+   *** message: 'h1' : CONFIRMED
+   *** message: 'h0w w45 y0ur d4y' : CONFIRMED
+   *** message: 'm1n3 w45 0k' : CONFIRMED
+   *** message: 'by3' : CONFIRMED
+   +++ send message: 'n1c3 2 h34r'
+   === UnreliableConsumer PROCESSED: 'n1c3 2 h34r' @ 04:01:22
+   +++ send message: 'n1c3 2 h34r'
+   === UnreliableConsumer PROCESSED: 'n1c3 2 h34r' @ 04:01:22
+   *** message: 'n1c3 2 h34r' : CONFIRMED
+TERMINATING: All messages confirmed
+
+Process finished with exit code 0
+```
+
+## Exercise 2.1 c)
+```text
+=========== ExactlyOnceApp ===========
+   +++ send message: 'h1'
+   +++ send message: 'h0w w45 y0ur d4y'
+   +++ send message: 'n1c3 2 h34r'
+   +++ send message: 'by3'
+   +++ send message: 'm1n3 w45 0k'
+   === UnreliableConsumer PROCESSED: 'h1' @ 03:58:10
+   === UnreliableConsumer PROCESSED: 'h0w w45 y0ur d4y' @ 03:58:10
+   === UnreliableConsumer PROCESSED: 'n1c3 2 h34r' @ 03:58:10
+   === UnreliableConsumer PROCESSED: 'by3' @ 03:58:10
+   *** message: 'h1' : CONFIRMED
+   === UnreliableConsumer PROCESSED: 'm1n3 w45 0k' @ 03:58:10
+   *** message: 'n1c3 2 h34r' : CONFIRMED
+   *** message: 'by3' : CONFIRMED
+   *** message: 'm1n3 w45 0k' : CONFIRMED
+   +++ send message: 'h0w w45 y0ur d4y'
+   *** message: 'h0w w45 y0ur d4y' : CONFIRMED
+TERMINATING: All messages confirmed
+
+Process finished with exit code 0
+```
+
+## Exercise 2.1 d)
+```text
+=========== ExactlyOnceAppRetryLimit ===========
+   +++ send message: 'h1'
+   +++ send message: 'h0w w45 y0ur d4y'
+   +++ send message: 'n1c3 2 h34r'
+   +++ send message: 'm1n3 w45 0k'
+   +++ send message: 'by3'
+   === UnreliableConsumer PROCESSED: 'h1' @ 03:55:52
+   === UnreliableConsumer PROCESSED: 'by3' @ 03:55:52
+   === UnreliableConsumer PROCESSED: 'm1n3 w45 0k' @ 03:55:52
+   === UnreliableConsumer PROCESSED: 'n1c3 2 h34r' @ 03:55:52
+   === UnreliableConsumer PROCESSED: 'h0w w45 y0ur d4y' @ 03:55:52
+   *** message: 'h1' : CONFIRMED
+   +++ send message: 'by3'
+   +++ send message: 'n1c3 2 h34r'
+   +++ send message: 'h0w w45 y0ur d4y'
+   +++ send message: 'm1n3 w45 0k'
+   +++ send message: 'by3'
+   +++ send message: 'n1c3 2 h34r'
+   +++ send message: 'h0w w45 y0ur d4y'
+   +++ send message: 'm1n3 w45 0k'
+   --- RETRY LIMIT REACHED: 'n1c3 2 h34r' : DISCARDED
+   --- RETRY LIMIT REACHED: 'm1n3 w45 0k' : DISCARDED
+   --- RETRY LIMIT REACHED: 'h0w w45 y0ur d4y' : DISCARDED
+   --- RETRY LIMIT REACHED: 'by3' : DISCARDED
+TERMINATING: All messages processed or discarded
+
+Process finished with exit code 0
+```
+
+## Exercise 2.2
+```text
+========== AskApp ==========
+=== Test Success Case ===
+MyAskActor => created
+MyAskActor => sent message to target
+SuccessActor => start work
+SuccessActor => finished work
+MyAskActor => received 'Message()'
+SUCCESS received: 'Message()'
+=== END Test Success Case ===
+=== Test Failure Case ===
+MyAskActor => created
+MyAskActor => sent message to target
+FailActor => start work
+MyAskActor => Timeout Received
+!!!FAILED: java.util.concurrent.TimeoutException: MyAskActor => Timeout received !!!
+=== END Test Failure Case ===
+FailActor => finished work
+========== END AskApp ==========
+
+Process finished with exit code 0
+```
+
 ## Exercise 2.3 e)
+Q:
+Analyze what happens if the rate at which measurements are generated is much higher than measurements can be stored
+
+A:
+Messages are delayed and possibly lost at some point. Memory capacity could be exceeded because the storage is slower than the generation of messages but it depends on what the actor system does in such a case. Old messages are read.
+
+Q:
+What can be done to mitigate this problem? Propose two possible improvements of your program. The implementation of these improvements is optional.
+
+- Put more storage actors in round robin queue
+- Assign e.g. one storage always to N weather stations
+- If it is a real big delay then each weatherstation can get several file storage actors
+- Adjust params for storage interval and threshold to optimize storage operation times
+- In a real system => Use faster storage than to file if possible (SQLite blob storage claims to be 35% faster) when file storage is the bottleneck
+- In a real system => Optimize the storage actor performance if possible
+
 Q:  Trace all operations (i. e. generation and storing of measurements) of your system.
 Show when and where (in which threads) operations are performed. 
 A:
@@ -108,23 +243,6 @@ fs2 => +++ 36 messages processed (thread id=21)
 
 Process finished with exit code 0
 ```
-
-Q:
-Analyze what happens if the rate at which measurements are generated is much higher than measurements can be stored
-
-A:
-Messages are delayed and possibly lost at some point. Memory capacity could be exceeded because the storage is slower than the generation of messages but it depends on what the actor system does in such a case. Old messages are read.
-
-Q:
-What can be done to mitigate this problem? Propose two possible improvements of your program. The implementation of these improvements is optional.
-
-- Put more storage actors in round robin queue
-- Assign e.g. one storage always to N weather stations
-- If it is a real big delay then each weatherstation can get several file storage actors
-- Adjust params for storage interval and threshold to optimize storage operation times
-- In a real system => Use faster storage than to file if possible (SQLite blob storage claims to be 35% faster) when file storage is the bottleneck
-- In a real system => Optimize the storage actor performance if possible
-
 
 ## Exercise 2.4 d)
 Q:
@@ -616,5 +734,4 @@ Dornbirn:100 => (02:34:53:407,18.824406,Celsius) (thread id=28)
 Las Vegas:100 => (02:34:53:407,51.048134,Fahrenheit) (thread id=22)
 
 Process finished with exit code 0
-
 ```
