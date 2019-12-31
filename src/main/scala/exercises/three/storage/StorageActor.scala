@@ -1,17 +1,14 @@
 package exercises.three.storage
 
 import java.nio.file.Paths
-
 import akka.actor.{Actor, ActorSystem}
-import exercises.three.weatherstation.WeatherStationActor.{Message, QueueEmpty, Stop}
+import exercises.three.weatherstation.WeatherStationActor.{Message, Stop}
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import java.nio.file.StandardOpenOption._
 import java.time.Duration
-
 import akka.NotUsed
-
-import scala.collection.mutable
+import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object StorageActor {
@@ -22,8 +19,8 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
   import StorageActor.Flush
 
   private implicit val system: ActorSystem = context.system
-  private val queue = mutable.Queue.empty[String]
-  private val file = Paths.get(s"C:\\Users\\GeraldSpenlingwimmer\\IdeaProjects\\mpvscala2\\src\\main\\scala\\exercises\\three\\storage\\$fileName")
+  private var queue = Queue.empty[String]
+  private val file = Paths.get(s"./src/main/scala/exercises/three/storage/$fileName")
   private var stop = false
   private var noMessages = 0
 
@@ -38,7 +35,7 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
       if (forcedDelayMode) {
         Thread.sleep(forcedDelayMs)
       }
-      queue += s"(${name}, ${measurement._2} Degree ${measurement._3}, ${measurement._1})\n"
+      queue = queue.enqueue(s"(${name}, ${measurement._2} Degree ${measurement._3}, ${measurement._1})\n")
       tryWriteThreshold()
       noMessages += 1
 
@@ -77,7 +74,7 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
   private def tryGetThresholdElements() = {
       if (queue.size >= bufferThreshold) {
         val elems = queue.take(bufferThreshold).toList
-        queue.remove(0, bufferThreshold)
+        queue = queue.drop(bufferThreshold)
         elems
       }
       else {
@@ -87,7 +84,7 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
 
   private def getElements(): List[String] = {
       val elems = queue.toList
-      queue.clear()
+      queue = Queue.empty
       elems
   }
 }

@@ -11,7 +11,7 @@ object WeatherStationActor {
   case class QueueEmpty(actor: ActorRef)
 }
 
-class WeatherStationActor(val name: String, val consumer: ActorRef, val lower: Float = -40.0f, val upper: Float = 40.0f, val messageIntervalMs: Int = 250, val unit: TemperatureUnit = TemperatureUnit.Celsius, val forceDelay: Boolean = false, val delayMs: Int = 0) extends Actor {
+class WeatherStationActor(val name: String, val consumer: ActorRef, val lower: Float = -40.0f, val upper: Float = 40.0f, val messageIntervalMs: Int = 250, val unit: TemperatureUnit = TemperatureUnit.Celsius) extends Actor {
   import WeatherStationActor.{Start, Stop, Message}
 
   private var job: Cancellable = null
