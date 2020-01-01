@@ -25,7 +25,6 @@ object AskApp extends App {
 
     Await.ready(future, Duration.Inf)
     Thread.sleep(50)
-
     println(s"=== END ${title} ===")
   }
 

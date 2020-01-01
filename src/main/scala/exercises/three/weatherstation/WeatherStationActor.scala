@@ -2,7 +2,10 @@ package exercises.three.weatherstation
 import exercises.three.util.{MeasurementGenerator, TemperatureUnit}
 import akka.actor.{Actor, ActorRef, Cancellable}
 import java.time.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 import exercises.three.util.TemperatureUnit.TemperatureUnit
+
+import scala.concurrent.Future
 
 object WeatherStationActor {
   case class Message(weatherStationName: String, measurement: (String, Float, TemperatureUnit))
@@ -19,18 +22,25 @@ class WeatherStationActor(val name: String, val consumer: ActorRef, val lower: F
   private val messageDelay: Duration = Duration.ofMillis(messageIntervalMs)
   private var noMessages = 0
 
-  private def println(msg: Any) = Console.println(s"$msg (thread id=${Thread.currentThread.getId})")
+  private def println(message: Any): Unit = {
+    printAsync(s"$message (thread id=${Thread.currentThread.getId})")
+  }
+  private def printAsync(msg: Any): Unit = {
+    Future { Console.println(s"$msg") }
+  }
 
   private def start() = {
     if (job == null) {
-      println("   ### WeatherStation started")
+      println(s"   ### WeatherStation '$name' started")
       job = context.system.scheduler.scheduleWithFixedDelay(
         messageDelay,
         messageDelay,
         () => {
           val measurement = generator.getMeasurement()
-          consumer ! Message(name, measurement)
           noMessages += 1
+          println(s"$name no.$noMessages => produced '$measurement'")
+          consumer ! Message(name, measurement)
+
         },
         context.system.dispatcher)
     }
@@ -39,7 +49,7 @@ class WeatherStationActor(val name: String, val consumer: ActorRef, val lower: F
   private def stop() = {
     if (job != null) {
       job.cancel()
-      println(s"   ### WeatherStation stopped, $noMessages number of messages generated")
+      println(s"   ### WeatherStation '$name' stopped, $noMessages messages generated")
       context.stop(self)
     }
   }

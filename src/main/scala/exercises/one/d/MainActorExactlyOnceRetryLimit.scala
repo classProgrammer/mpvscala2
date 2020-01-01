@@ -18,8 +18,6 @@ class MainActorExactlyOnceRetryLimit extends Actor {
 
   context watch producer
 
-
-
   override def receive: Receive = {
     case AllMessagesConfirmed() =>
         println("TERMINATING: All messages processed or discarded")

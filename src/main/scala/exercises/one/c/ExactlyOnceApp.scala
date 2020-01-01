@@ -7,5 +7,4 @@ object ExactlyOnceApp extends App {
 
   val system = ActorSystem("ExactlyOnceApp")
   system.actorOf(Props[MainActorExactlyOnce], "MainActorExactlyOnce")
-
 }

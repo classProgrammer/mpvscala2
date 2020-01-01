@@ -14,33 +14,41 @@ import akka.stream.scaladsl.{FileIO, Flow, Sink, Source}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
-class WeatherStation {
-
+object WeatherStationTypes {
+  type Measurement = (String, (String, Float, TemperatureUnit))
+  type SourceType = Source[Measurement, Cancellable]
+  type FlowType = Flow[Measurement, ByteString, NotUsed]
+  type SinkType = Sink[ByteString, Future[IOResult]]
 }
 
-object WeatherStationStream extends App {
-  private implicit val system: ActorSystem = ActorSystem("WeatherStation")
-
-  import system.dispatcher
-  private type Measurement = (String, (String, Float, TemperatureUnit))
-  private type SourceType = Source[Measurement, Cancellable]
-  private type FlowType = Flow[Measurement, ByteString, NotUsed]
-  private type SinkType = Sink[ByteString, Future[IOResult]]
-  private val generateInterval = 1.millis
-  private val fileName = "streamed_weather_station.txt"
-  private val file = Paths.get(s"./src/main/scala/exercises/four/file/$fileName")
-  private val chunkSize = 7
-  private val elements = 100
-  private val elementsToThrottle = 1
-  private val parallelism = 4
-  private val generators = Seq(
+object WeatherStationConfig {
+  val fileName = "streamed_weather_station.txt"
+  val file = Paths.get(s"./src/main/scala/exercises/four/file/$fileName")
+  val batchSize = 7
+  val elements = 100
+  val elementsToThrottle = 1
+  val parallelism = 4
+  val generators = Seq(
     new MeasurementGenerator(20.2f, 22.15f, TemperatureUnit.Celsius),
     new MeasurementGenerator(22.55f, 24.12f, TemperatureUnit.Celsius),
     new MeasurementGenerator(18.45f, 19.68f, TemperatureUnit.Celsius),
     new MeasurementGenerator(40.77f, 52.93f, TemperatureUnit.Fahrenheit)
   )
+}
 
-  private def println(msg: Any) = Console.println(s"$msg (thread id=${Thread.currentThread.getId})")
+object WeatherStationStreamApp extends App {
+  import WeatherStationTypes._
+  import WeatherStationConfig._
+  import system.dispatcher
+
+  private implicit val system: ActorSystem = ActorSystem("WeatherStation")
+
+  private def println(message: Any): Unit = {
+    printAsync(s"$message (thread id=${Thread.currentThread.getId})")
+  }
+  private def printAsync(msg: Any): Unit = {
+    Future { Console.println(s"$msg") }
+  }
 
   private def getFlow(): FlowType = {
     Flow[Measurement].map(x => {
@@ -84,16 +92,16 @@ object WeatherStationStream extends App {
     collection :+ elem
   }
 
-  def getChunkedFlowMapAsync(chunkSize: Int): FlowType = {
-    Flow[Measurement].batch(chunkSize, Seq(_)) (makeCollection)
+  def getChunkedFlowMapAsync(batchSize: Int): FlowType = {
+    Flow[Measurement].batch(batchSize, Seq(_)) (makeCollection)
       .mapAsync(parallelism)(collection => Future {
         println(s"--- Write ${collection.size} items to file")
         ByteString(collection.map(measurementAsStringLine).mkString("\n"))
     })
   }
 
-  def getChunkedFlowMapAsync(chunkSize: Int, delay: FiniteDuration): FlowType = {
-    Flow[Measurement].batch(chunkSize, Seq(_)) (makeCollection)
+  def getChunkedFlowMapAsync(batchSize: Int, delay: FiniteDuration): FlowType = {
+    Flow[Measurement].batch(batchSize, Seq(_)) (makeCollection)
       .throttle(elementsToThrottle, delay)
       .mapAsync(parallelism)(collection => Future {
         println(s"--- Write ${collection.size} items to file")
@@ -110,7 +118,7 @@ object WeatherStationStream extends App {
       })
   }
 
-  def getChunkedFlow(chunkSize: Int, delay: FiniteDuration): FlowType = {
+  def getChunkedFlow(batchSize: Int, delay: FiniteDuration): FlowType = {
     Flow[Measurement]
       .throttle(elementsToThrottle, delay)
       .map(elem => {
@@ -122,20 +130,18 @@ object WeatherStationStream extends App {
   def main(): Unit = {
     println("========== WeatherStationStream App ==========")
 
-    val source1 = getSource("Linz", generators(0), 2.millis)
-    val source2 = getSource("Vienna", generators(1), 3.millis)
-    val source3 = getSource("Dornbirn", generators(2), 5.millis)
-    val source4 = getSource("Las Vegas", generators(3), 7.millis)
+    val sources = Seq(
+      getSource("Linz", generators(0), 2.millis),
+      getSource("Vienna", generators(1), 3.millis),
+      getSource("Dornbirn", generators(2), 5.millis),
+      getSource("Las Vegas", generators(3), 7.millis)
+    )
 
-    val flow = getChunkedFlowMapAsync(chunkSize, 200.millis)
+    val flow = getChunkedFlowMapAsync(batchSize, 200.millis)
     val sink = getSink(file)
 
-    val futures: Future[List[IOResult]] = Future.sequence(List(
-        pipeline(source1, flow, sink, elements),
-        pipeline(source2, flow, sink, elements),
-        pipeline(source3, flow, sink, elements),
-        pipeline(source4, flow, sink, elements)
-    ))
+    val futures: Future[Seq[IOResult]] = Future.sequence(
+      sources.map(source => pipeline(source, flow, sink, elements)))
 
     Await.ready(futures, Duration.Inf)
     println("========== END WeatherStationStream App ==========")

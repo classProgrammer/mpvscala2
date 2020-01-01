@@ -1,15 +1,19 @@
 package exercises.three.storage
 
 import java.nio.file.Paths
+
 import akka.actor.{Actor, ActorSystem}
 import exercises.three.weatherstation.WeatherStationActor.{Message, Stop}
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import java.nio.file.StandardOpenOption._
 import java.time.Duration
+
 import akka.NotUsed
+
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object StorageActor {
   case class Flush()
@@ -27,11 +31,16 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
   private val intervalDuration: Duration = Duration.ofMillis(bufferWriteIntervalMs)
   context.system.scheduler.scheduleWithFixedDelay(intervalDuration, intervalDuration, () => { self ! Flush() }, context.system.dispatcher)
 
-  private def println(msg: Any) = Console.println(s"$storageName => $msg (thread id=${Thread.currentThread.getId})")
+  private def println(message: Any): Unit = {
+    printAsync(s"$storageName => $message (thread id=${Thread.currentThread.getId})")
+  }
+  private def printAsync(msg: Any): Unit = {
+    Future { Console.println(s"$msg") }
+  }
 
   override def receive: Receive = {
     case Message(name, measurement) =>
-      println("Message Received")
+      println(s"Message '$name:$measurement' Received")
       if (forcedDelayMode) {
         Thread.sleep(forcedDelayMs)
       }
@@ -62,7 +71,7 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
     val elems = tryGetThresholdElements()
     if (elems != null) {
       writeList(Source(elems))
-      println("THRESHOLD ELEMENTS WRITTEN")
+      println(s"THRESHOLD reached: $bufferThreshold ELEMENTS WRITTEN")
     }
   }
 
@@ -73,9 +82,9 @@ class StorageActor(val storageName: String, val fileName: String, val bufferThre
 
   private def tryGetThresholdElements() = {
       if (queue.size >= bufferThreshold) {
-        val elems = queue.take(bufferThreshold).toList
-        queue = queue.drop(bufferThreshold)
-        elems
+        val splitted: (Queue[String], Queue[String]) = queue.splitAt(bufferThreshold)
+        queue = splitted._1
+        splitted._2
       }
       else {
         null

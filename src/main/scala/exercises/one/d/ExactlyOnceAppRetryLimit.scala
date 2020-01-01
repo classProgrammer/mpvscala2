@@ -7,5 +7,4 @@ object ExactlyOnceAppRetryLimit extends App {
 
   val system = ActorSystem("ExactlyOnceAppRetryLimit")
   system.actorOf(Props[MainActorExactlyOnceRetryLimit], "MainActorExactlyOnceRetryLimit")
-
 }

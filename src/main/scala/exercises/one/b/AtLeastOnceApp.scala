@@ -7,5 +7,4 @@ object AtLeastOnceApp extends App {
 
   val system = ActorSystem("AtLeastOnceApp")
   system.actorOf(Props[MainActor], "MainActor")
-
 }

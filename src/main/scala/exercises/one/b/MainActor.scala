@@ -17,8 +17,6 @@ class MainActor extends Actor {
 
   context watch producer
 
-
-
   override def receive: Receive = {
     case AllMessagesConfirmed() =>
         println("TERMINATING: All messages confirmed")

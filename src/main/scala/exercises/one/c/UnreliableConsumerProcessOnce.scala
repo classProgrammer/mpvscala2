@@ -13,7 +13,6 @@ class UnreliableConsumerProcessOnce(successProbability: Float) extends Actor {
   val rand = scala.util.Random
   var processed = Map.empty[UUID, UUID]
 
-
   override def receive: Receive = {
     case Message(id, text) =>
 
@@ -21,7 +20,6 @@ class UnreliableConsumerProcessOnce(successProbability: Float) extends Actor {
         println(s"   === UnreliableConsumer PROCESSED: '$text' @ ${PCUtil.now()}")
         processed += Tuple2(id, id)
       }
-
       if (!(rand.nextFloat() > successProbability)) {
         context.sender() ! Confirm(id, text)
       }

@@ -7,5 +7,4 @@ object SimpleMessageExchange extends App {
 
   val system = ActorSystem("SimpleMessageExchange")
   system.actorOf(Props[MainActor], "MainActor")
-
 }

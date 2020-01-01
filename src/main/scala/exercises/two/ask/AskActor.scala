@@ -2,13 +2,7 @@ package exercises.two.ask
 
 import akka.actor.{Actor, ActorRef, Props, ReceiveTimeout}
 import akka.util.Timeout
-
 import scala.concurrent.{Promise, TimeoutException}
-
-object AskActor {
-  def props(message: Any, timeout: Timeout, sender: ActorRef, target: ActorRef, promise: Promise[Any]): Props =
-    Props(new AskActor(message, timeout, sender, target, promise))
-}
 
 class AskActor(message: Any, timeout: Timeout, sender: ActorRef, target: ActorRef, promise: Promise[Any]) extends Actor {
   private val name = self.path.name
