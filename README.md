@@ -369,7 +369,7 @@ It seems that streams loose messages whereas with the actors all messages can be
 Getting the exactly same behaviour is kind of hard. To achieve this the stream sources were combined to one source to force all sources into the same flow (the flow was only one actor in 2.3 and this way there is only one flow so 1:1 and each source represents a source actor from 2.3 so it's N:N).
 It this is not done each source has a flow itself and this destroys the round robin buffer. Then elements are written to the file in blocks of the same source. If that's not a problem than this approach can be used too.
 From the exercise sheet I can't determine which approach is wanted.
-
+The akka documentation also does not provide information about the "runWith" method hence it can not be clarified if a bulk write has to be done in code by combining the entries to a string in a Source.single or if calling the method with a regular source counts as bulk write.
 
 
 Q:Trace all operations (i. e. generation and storing of measurements) of your system.
