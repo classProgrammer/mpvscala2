@@ -4,19 +4,19 @@ import java.nio.file.{Path, Paths}
 import java.nio.file.StandardOpenOption.{APPEND, WRITE}
 
 import akka.{Done, NotUsed}
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorSystem}
 import akka.stream.IOResult
 import akka.util.ByteString
 import exercises.three.util.{MeasurementGenerator, TemperatureUnit}
 import exercises.three.util.TemperatureUnit.TemperatureUnit
-import akka.stream.scaladsl.{FileIO, Flow, Sink, Source}
+import akka.stream.scaladsl.{FileIO, Flow, Merge, Sink, Source}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 object WeatherStationTypes {
   type Measurement = (String, (String, Float, TemperatureUnit))
-  type SourceType = Source[Measurement, Cancellable]
+  type SourceType = Source[Measurement, Any]
   type FlowTypeSeq = Flow[Measurement, ByteString, NotUsed]
   type FlowType = Flow[Measurement, IOResult, NotUsed]
   type SinkType = Sink[ByteString, Future[IOResult]]
@@ -30,7 +30,7 @@ object WeatherStationConfig {
   val elementsToThrottle = bulkWriteSize
   val parallelism = 4
   val waitForGrouping: FiniteDuration = 200.millis
-  val maxGenerationDelay = 10
+  val maxGenerationDelay = 2
   val minGenerationDelay = 1
   val diffGenerationDelay = maxGenerationDelay - minGenerationDelay
 }
@@ -83,7 +83,7 @@ object WeatherStationStreamApp extends App {
       .groupedWithin(batchSize, waitForGrouping)
       .map(collection => {
         println(s"--- write ${collection.size} elements")
-        measurementSequenceAsByteStringLine(collection)
+        measurementAsByteStringLine(collection)
       })
   }
 
@@ -92,7 +92,7 @@ object WeatherStationStreamApp extends App {
       .throttle(elementsToThrottle, delay)
       .mapAsync(parallelism)(elem => {
         println(s"--- write to file")
-        Source(Seq(elem)).map(measurementAsByteStringLine).runWith(sink)
+        Source.single(elem).map(measurementAsByteStringLine).runWith(sink)
       })
   }
 
@@ -123,13 +123,13 @@ object WeatherStationStreamApp extends App {
       .throttle(elementsToThrottle, delay)
       .groupedWithin(batchSize, waitForGrouping)
       .map(collection => {
-        val tuple = (collection, sinks(idx))
+        val tuple = (collection, sinks(idx), idx)
         idx = (idx + 1) % n
         tuple
       })
       .mapAsync(parallelism)(tuple => {
-        println(s"--- write ${tuple._1.size} elements")
-        Source(tuple._1).map(measurementAsByteStringLine).runWith(tuple._2)
+        println(s"--- write ${tuple._1.size} elements to file no.${tuple._3}")
+        Source.single(measurementAsByteStringLine(tuple._1)).runWith(tuple._2)
       })
   }
 
@@ -157,10 +157,10 @@ object WeatherStationStreamApp extends App {
 
   // ======================== MEASUREMENT TO (BYTE)STRING ========================
   private def measurementAsByteStringLine(measurement: Measurement): ByteString = {
-    ByteString(s"${measurementAsString(measurement)}\n")
+    ByteString(measurementAsStringLine(measurement))
   }
 
-  private def measurementSequenceAsByteStringLine(measurements: Seq[Measurement]): ByteString = {
+  private def measurementAsByteStringLine(measurements: Seq[Measurement]): ByteString = {
     ByteString(measurements.map(measurementAsStringLine).mkString(""))
   }
 
@@ -179,7 +179,8 @@ object WeatherStationStreamApp extends App {
 
     val fileNames = Seq(
       "streamed_weather_station1.txt",
-      "streamed_weather_station2.txt"
+      "streamed_weather_station2.txt",
+      "streamed_weather_station3.txt"
     )
     val files = fileNames.map(fileName => Paths.get(s"$basePath/$fileName"))
     val sinks = files.map(getSink)
@@ -188,18 +189,21 @@ object WeatherStationStreamApp extends App {
       "Linz",
       "Vienna",
       "Dornbirn",
-      "New York"
+      "New York",
+      "Washington"
     )
 
     val generators = sourceNames.map(_ => new MeasurementGenerator(20.2f, 24.15f, TemperatureUnit.Celsius))
-    val sources = (0 to generators.size - 1).map(i => getSource(sourceNames(i), generators(i), (minGenerationDelay + rand.nextInt(diffGenerationDelay) + 1).millis))
+    val sources = (0 to generators.size - 1).map(i => getSource(sourceNames(i), generators(i), (minGenerationDelay + rand.nextInt(diffGenerationDelay)).millis))
+    val theSource: SourceType = Source.combine(sources(0), sources(1), sources(2), sources(3), sources(4))(Merge(_))
 
     val flow = getChunkedFlowMapAsyncRoundRobin(bulkWriteSize, bulkWriteDelay, sinks)
-    val futures = Future.sequence(sources.map(source => pipeline(source, flow, elementsToGenerate)))
 
-    Await.ready(futures, Duration.Inf)
-    println("========== END WeatherStationStream App ==========")
+    val future = pipeline(theSource, flow, elementsToGenerate * sourceNames.size)
+
+    Await.ready(future, Duration.Inf)
     Thread.sleep(100)
+    println("========== END WeatherStationStream App ==========")
     system.terminate()
   }
 
