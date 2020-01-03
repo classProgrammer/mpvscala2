@@ -366,6 +366,10 @@ Actors can be customized more easy. Actors feel like microservices and Streams m
 Actors need more code, are more structural because of the classes and messages. 
 As far as I see it, i cannot use a stream cyclic and non cyclic at the same time like I did with the actor (e.g. store all 4 seconds cyclic and when the threashold of 7 is reached).
 It seems that streams loose messages whereas with the actors all messages can be processed. But this is completely irrelevant when the system never stops => IOT shouldn't stop. 
+Getting the exactly same behaviour is kind of hard. To achieve this the stream sources were combined to one source to force all sources into the same flow (the flow was only one actor in 2.3 and this way there is only one flow so 1:1 and each source represents a source actor from 2.3 so it's N:N).
+It this is not done each source has a flow itself and this destroys the round robin buffer. Then elements are written to the file in blocks of the same source. If that's not a problem than this approach can be used too.
+From the exercise sheet I can't determine which approach is wanted.
+
 
 
 Q:Trace all operations (i. e. generation and storing of measurements) of your system.

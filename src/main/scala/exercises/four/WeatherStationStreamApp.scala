@@ -195,14 +195,21 @@ object WeatherStationStreamApp extends App {
 
     val generators = sourceNames.map(_ => new MeasurementGenerator(20.2f, 24.15f, TemperatureUnit.Celsius))
     val sources = (0 to generators.size - 1).map(i => getSource(sourceNames(i), generators(i), (minGenerationDelay + rand.nextInt(diffGenerationDelay)).millis))
-    val theSource: SourceType = Source.combine(sources(0), sources(1), sources(2), sources(3), sources(4))(Merge(_))
-
     val flow = getChunkedFlowMapAsyncRoundRobin(bulkWriteSize, bulkWriteDelay, sinks)
 
+    println("    ====== RUN 1 one Flow ======")
+    // WITH theSource EVERY SOURCE USES THE SAME FLOW
+    val theSource: SourceType = Source.combine(sources(0), sources(1), sources(2), sources(3), sources(4))(Merge(_))
     val future = pipeline(theSource, flow, elementsToGenerate * sourceNames.size)
-
     Await.ready(future, Duration.Inf)
     Thread.sleep(100)
+
+    println("\n\n\n    ====== RUN 2 multiple Flows ======")
+    // THIS PRODUCES SOURCES WITH INDIVIDUAL FLOWS
+    val futures = Future.sequence(sources.map(pipeline(_, flow, elementsToGenerate)))
+    Await.ready(futures, Duration.Inf)
+    Thread.sleep(100)
+
     println("========== END WeatherStationStream App ==========")
     system.terminate()
   }
